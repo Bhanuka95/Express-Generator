@@ -12,6 +12,7 @@ var leaderRouter = require('./routes/leaderRouter');
 
 const mongoose = require('mongoose');
 const Dishes = require('./models/dishes');
+
 const url = 'mongodb://localhost:27017/conFusion';
 const connect = mongoose.connect(url);
 
@@ -29,6 +30,38 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+//AUTHORIZATION MIDDLEWARE
+function auth(req, res, next){
+  console.log(req.headers);
+  var authHeader = req.headers.authorization;
+  if(!authHeader){
+    var err = new Error('You are not authenticated');
+    res.setHeader('WWW-Authenticate', 'Basic');
+    err.status = 401;
+    next(err);
+  }
+  var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':'); //Buffer enables to split the header
+    //above will split the header and store it in an array
+    //second element will be the base64 encoder string 
+    //another split should be done in order to seperate the user name and password
+  
+  var username = auth[0];
+  var password = auth[1];
+
+  if(username === 'admin' && password === 'password'){
+    next();//from the auth the request will pass to the next middleware (allowed)
+  }
+  else{
+    var err = new Error('You are not authenticated');
+    res.setHeader('WWW-Authenticate', 'Basic');
+    err.status = 401;
+    next(err);
+  }
+}
+app.use(auth); //before client can access under resources, he has to first be authorized
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
