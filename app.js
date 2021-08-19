@@ -42,59 +42,36 @@ app.use(session({
   store: new FileStore()
 }));
 
+//Incoming user should be able to access the index file and the users file without being authenticated
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
 //AUTHORIZATION MIDDLEWARE
 function auth(req, res, next){
   console.log(req.session);
 
   if(!req.session.user){
-    var authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      var err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate', 'Basic');       
+      var err = new Error('You are not authenticated!');       
       err.status = 401;
       next(err);
       return;
-    }
-    var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':'); //Buffer enables to split the header
-      //above will split the header and store it in an array
-      //second element will be the base64 encoder string 
-      //another split should be done in order to seperate the user name and password
-    
-    var user = auth[0];
-    var pass = auth[1];
-  
-    if (user == 'admin' && pass == 'password') {
-      // res.cookie('user','admin',{signed: true});
-      req.session.user = 'admin';
-      next(); // authorized
-    } else {
-      var err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate', 'Basic');              
-      err.status = 401;
-      next(err);
-    }
   }
   else{
-    if(req.session.user === 'admin'){
+    if(req.session.user === 'authenticated'){
       next();
     }
     else{
       var err = new Error('You are not authenticated');
-      
-      err.status = 401;
+      err.status = 403;
       return next(err);
     }
   }
-
 }
 app.use(auth); //before client can access under resources, he has to first be authorized
 
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/dishes', dishRouter);
 app.use('/promotions', promoRouter);
 app.use('/leaders', leaderRouter);
