@@ -5,6 +5,8 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var session = require('express-session')
 var FileStore = require('session-file-store')(session);
+var passport = require('passport');
+var authenticate = require('./authenticate')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -42,29 +44,23 @@ app.use(session({
   store: new FileStore()
 }));
 
+app.use(passport.initialize());
+app.use(passport.session());
+
 //Incoming user should be able to access the index file and the users file without being authenticated
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
 //AUTHORIZATION MIDDLEWARE
 function auth(req, res, next){
-  console.log(req.session);
-
-  if(!req.session.user){
+  if(!req.user){
       var err = new Error('You are not authenticated!');       
-      err.status = 401;
+      err.status = 403;
       next(err);
       return;
   }
   else{
-    if(req.session.user === 'authenticated'){
-      next();
-    }
-    else{
-      var err = new Error('You are not authenticated');
-      err.status = 403;
-      return next(err);
-    }
+    next();
   }
 }
 app.use(auth); //before client can access under resources, he has to first be authorized
